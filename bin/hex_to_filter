@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require './lib/hex_to_filter'
+
+solver = HexToFilter.new
+puts solver.get_filters('#ffffff')
+puts solver.get_filters('#4a5455')
+puts solver.get_filters('#000000')
