@@ -8,10 +8,16 @@ require './lib/matrices'
 class HexToFilter
   include Matrices
 
+  def initialize(format: nil)
+    @format = format
+  end
+
   def get_filters(target_color)
     rgb = hex_to_rgb(target_color)
     wide_solutions = explore(rgb)
-    to_css(best_result_from(rgb, wide_solutions))
+    result = best_result_from(rgb, wide_solutions)
+    return to_css(result) if @format == 'css'
+    return result
   end
 
   def to_css(result)

@@ -3,7 +3,9 @@
 
 require './lib/hex_to_filter'
 
-solver = HexToFilter.new
+solver = HexToFilter.new(format: 'css')
+
 puts solver.get_filters('#ffffff')
 puts solver.get_filters('#4a5455')
 puts solver.get_filters('#000000')
+puts solver.get_filters('#ff0000')
