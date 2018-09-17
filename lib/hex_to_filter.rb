@@ -16,8 +16,11 @@ class HexToFilter
     rgb = hex_to_rgb(target_color)
     wide_solutions = explore(rgb)
     result = best_result_from(rgb, wide_solutions)
+
+    # adjust hue-rotate output
+    result[:values][3] = (result[:values][3] * 3.6).round
     return to_css(result) if @format == 'css'
-    return result
+    result
   end
 
   def to_css(result)
