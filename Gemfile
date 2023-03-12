@@ -2,7 +2,5 @@
 
 source 'https://rubygems.org'
 
-gem 'minitest'
+gem 'minitest', group: :test
 gem 'rake'
-
-gem 'pry'

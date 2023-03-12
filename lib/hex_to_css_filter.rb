@@ -1,31 +1,39 @@
 # frozen_string_literal: true
 
-# `filter: invert(${fmt(0)}%) sepia(${fmt(1)}%) saturate(${fmt(2)}%) hue-rotate(${fmt(3,3.6)}deg) brightness(${fmt(4)}%) contrast(${fmt(5)}%);`
+require 'hex_to_css_filter/matrices'
 
-require 'pry'
-require './lib/matrices'
-
-class HexToFilter
+class HexToCssFilter
   include Matrices
 
-  def initialize(format: nil)
-    @format = format
+  class << self
+    def convert(target_color)
+      new.convert(target_color)
+    end
   end
 
-  def get_filters(target_color)
+  def convert(target_color)
     rgb = hex_to_rgb(target_color)
     wide_solutions = explore(rgb)
     result = best_result_from(rgb, wide_solutions)
 
-    # adjust hue-rotate output
+    # adjust hue-rotate output to degree
     result[:values][3] = (result[:values][3] * 3.6).round
-    return to_css(result) if @format == 'css'
-    result
+
+    { css_filter: to_css(result[:values]), loss: result[:loss] }
   end
 
-  def to_css(result)
-    filters = result[:values]
-    "invert(#{filters[0]}%) sepia(#{filters[1]}%) saturate(#{filters[2]}%) hue-rotate(#{filters[3]}deg) brightness(#{filters[4]}%) contrast(#{filters[5]}%)"
+  def hex_to_rgb(input)
+    rgb = /#(..?)(..?)(..?)/.match(input)[1..3]
+    rgb.map! { |x| x + x } if input.size == 4
+    rgb.map!(&:hex)
+
+    rgb
+  end
+
+  private
+
+  def to_css(values)
+    "invert(#{values[0]}%) sepia(#{values[1]}%) saturate(#{values[2]}%) hue-rotate(#{values[3]}deg) brightness(#{values[4]}%) contrast(#{values[5]}%)"
   end
 
   def explore(rgb)
@@ -51,14 +59,6 @@ class HexToFilter
     a1 = a + 1
     arr = [0.25 * a1, 0.25 * a1, a1, 0.25 * a1, 0.2 * a1, 0.2 * a1]
     spsa(rgb, a, arr, c, wide[:values], 500)
-  end
-
-  def hex_to_rgb(input)
-    rgb = /#(..?)(..?)(..?)/.match(input)[1..3]
-    rgb.map! { |x| x + x } if input.size == 4
-    rgb.map!(&:hex)
-
-    rgb
   end
 
   def rgb_to_hsl(input)
@@ -99,14 +99,14 @@ class HexToFilter
 
     (0...iters).each do |k|
       ck = c / ((k + 1)**gamma).to_f
-      (0...6).each do |i|
+      6.times do |i|
         deltas[i] = rand(0.0..1.0) > 0.5 ? 1 : -1
         high_args[i] = values[i] + ck * deltas[i]
         low_args[i] = values[i] - ck * deltas[i]
       end
 
       loss_diff = loss(target_color: rgb, filters: high_args) - loss(target_color: rgb, filters: low_args)
-      (0...6).each do |i|
+      6.times do |i|
         g = loss_diff / (2 * ck).to_f * deltas[i]
         ak = arr[i] / ((a + k + 1)**alpha).to_f
         values[i] = fix(values[i] - ak * g, i)
@@ -126,7 +126,7 @@ class HexToFilter
     max = 100
     if idx == 2 # saturate
       max = 7500
-    elsif idx == 4 || idx == 5 # brightness || contrast
+    elsif [4, 5].include?(idx) # brightness || contrast
       max = 200
     end
 
@@ -144,7 +144,7 @@ class HexToFilter
     value
   end
 
-  def loss(base_color: [0, 0, 0], target_color:, filters:)
+  def loss(target_color:, filters:, base_color: [0, 0, 0])
     base_color = invert(base_color, filters[0] / 100.0)
     base_color = sepia(base_color, filters[1] / 100.0)
     base_color = saturate(base_color, filters[2] / 100.0)
@@ -186,11 +186,10 @@ class HexToFilter
     linear(rgb, value, -(0.5 * value) + 0.5)
   end
 
-  private
-
   def clamp(value)
     return 255 if value > 255
     return 0 if value.negative?
+
     value
   end
 
